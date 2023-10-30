@@ -1,0 +1,12 @@
+version: '3.9'
+services:
+  postgresql:
+    image: 'bitnami/postgresql:latest'
+    ports:
+      - '5432'
+    environment:
+
+      - POSTGRESQL_USERNAME=api_integration
+      - POSTGRESQL_PASSWORD=password123
+      - POSTGRESQL_DATABASE=api_integration_database
+ 
