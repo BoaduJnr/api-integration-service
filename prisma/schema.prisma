@@ -10,6 +10,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Account {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String
+  email          String
+  API_Key        String       @unique @map("api_key") @db.VarChar(255)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  revoke         Revoke[]
+  Oauth2         OauthToken[]
+}
 
+model OauthToken {
+  id      Int     @id
+  API_key String  @map("api_key")
+  jwt     String  @db.Text
+  domain  Account @relation(fields: [API_key], references: [API_Key])
+}
 
+model Revoke {
+  id            Int      @id
+  API_key       String
+  deactivated   Boolean  @default(false)
+  deactivatedAt DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  accountId     String   @db.Uuid()
+  account       Account  @relation(fields: [accountId], references: [id])
+}
 
+//rolling for revoking
+//checksum for quick rejection
+//cache response for minimize latencey and database call
+//Hide keys untill needed in frontend
+//use underscore to break keys
