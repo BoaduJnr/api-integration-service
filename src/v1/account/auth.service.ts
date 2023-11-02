@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, Account } from '@prisma/client';
 
 @Injectable()
@@ -11,7 +11,7 @@ export class AuthService {
     return this.prismaService.account.create({ data });
   }
 
-  async findAccount(
+  async getAccount(
     where: Prisma.AccountWhereUniqueInput,
   ): Promise<Account | null> {
     return this.prismaService.account.findUnique({
@@ -20,7 +20,16 @@ export class AuthService {
     });
   }
 
-  async addAccountOauth(data: Prisma.OauthTokenCreateInput){
-    return this.prismaService.oauthToken.create({data})
+  async addOauthToAccount(data: Prisma.OauthTokenCreateInput) {
+    return this.prismaService.oauthToken.create({ data });
+  }
+  async generateAPIKey(data: Prisma.APIKeyCreateInput) {
+    return this.prismaService.aPIKey.create({ data });
+  }
+  async deactivateAPIKey(
+    where: Prisma.APIKeyWhereUniqueInput,
+    data: Prisma.APIKeyUpdateInput,
+  ) {
+    return this.prismaService.aPIKey.update({ where, data });
   }
 }

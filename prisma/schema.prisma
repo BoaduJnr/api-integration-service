@@ -12,31 +12,30 @@ datasource db {
 
 model Account {
   id             String       @id @default(uuid()) @db.Uuid
-  organizationId String
-  email          String
+  organizationId String       @unique
+  email          String       @unique
   API_Key        String       @unique @map("api_key") @db.VarChar(255)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  revoke         Revoke[]
+  revoke         APIKey[]
   Oauth2         OauthToken[]
 }
 
 model OauthToken {
-  id      Int     @id
-  API_key String  @map("api_key")
-  jwt     String  @db.Text
-  domain  Account @relation(fields: [API_key], references: [API_Key])
+  id       Int     @id
+  jwt      String
+  API_key  String  @map("api_key")
+  API_Keys Account @relation(fields: [API_key], references: [API_Key])
 }
 
-model Revoke {
-  id            Int      @id
-  API_key       String
-  deactivated   Boolean  @default(false)
-  deactivatedAt DateTime
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  accountId     String   @db.Uuid()
-  account       Account  @relation(fields: [accountId], references: [id])
+model APIKey {
+  id             Int       @id
+  API_key        String
+  deactivated    Boolean   @default(false)
+  deactivatedAt  DateTime?
+  createdAt      DateTime  @default(now())
+  organizationId String    @db.Uuid()
+  account        Account   @relation(fields: [organizationId], references: [organizationId])
 }
 
 //rolling for revoking
