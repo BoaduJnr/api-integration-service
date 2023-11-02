@@ -12,21 +12,15 @@ datasource db {
 
 model Account {
   id             String       @id @default(uuid()) @db.Uuid
-  organizationId String       @unique
+  organizationId String       @unique @db.Uuid()
   email          String       @unique
   API_Key        String       @unique @map("api_key") @db.VarChar(255)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   revoke         APIKey[]
-  Oauth2         OauthToken[]
+ 
 }
 
-model OauthToken {
-  id       Int     @id
-  jwt      String
-  API_key  String  @map("api_key")
-  API_Keys Account @relation(fields: [API_key], references: [API_Key])
-}
 
 model APIKey {
   id             Int       @id
