@@ -42,9 +42,11 @@ export class AuthController {
   ) {
     return this.authService.updateAccount(where, { deactivated: true });
   }
-  @Post('generate')
-  generateAPIKey() {
-    return { msg: 'login' };
+  @Post('generate/:organizationId')
+  generateAPIKey(
+    @Param(new ValidationPipe({ whitelist: true })) data: OrganizationIdDTO,
+  ) {
+    this.authService.createAPIKey(data.organizationId);
   }
   @Patch('deactivate')
   deactivateAPIKey(

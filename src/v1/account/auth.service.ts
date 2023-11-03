@@ -6,10 +6,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, Account, APIKey } from '@prisma/client';
+import { GenerateAPIKey } from 'src/common/helper/generate_api_keys';
 
 @Injectable()
 export class AuthService {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    private apiKeyGenerator: GenerateAPIKey,
+  ) {}
   async createAccount(
     data: Prisma.AccountCreateInput,
   ): Promise<Account | null> {
@@ -73,9 +77,12 @@ export class AuthService {
     }
   }
 
-  async createAPIKey(data: Prisma.APIKeyCreateInput) {
+  async createAPIKey(organizationId: string) {
     try {
-      return await this.prismaService.aPIKey.create({ data });
+      const apiKey = this.apiKeyGenerator.generateRandomStringWithChecksum();
+      return await this.prismaService.aPIKey.create({
+        data: { apiKey, organizationId },
+      });
     } catch (err) {
       throw err;
     }
