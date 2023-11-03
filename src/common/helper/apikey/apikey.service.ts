@@ -26,7 +26,7 @@ export class GenerateAPIKey {
   }
 
   generateRandomStringWithChecksum(): string {
-    const randomPartLength = 8;
+    const randomPartLength = 18;
 
     const randomPart = this.generateRandomString(randomPartLength);
     const checksum = this.generateChecksum(randomPart);

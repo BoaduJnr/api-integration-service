@@ -26,9 +26,8 @@ export class AuthController {
     return this.authService.createAccount(data);
   }
   @Get('verifyKey')
-  async verifyAPIKey(@APIKey('X-API-KEY') apiKey: string) {
-    const { organizationId } = await this.authService.getAPIKey({ apiKey });
-    return this.authService.getAccount({ organizationId });
+  async verifyAPIKey(@APIKey('x-api-key') apiKey: string) {
+    return this.authService.getAPIKey({ apiKey });
   }
   @Get(':organizationId')
   async getAccount(
@@ -36,25 +35,29 @@ export class AuthController {
   ) {
     return this.authService.getAccount(data);
   }
-  @Patch(':organizationId')
+  @Patch('deactivate/:organizationId')
   async deactivateAccount(
     @Param(new ValidationPipe({ whitelist: true })) where: OrganizationIdDTO,
   ) {
-    return this.authService.updateAccount(where, { deactivated: true });
+    const deactivateAt = new Date(Date.now());
+    return this.authService.updateAccount(where, {
+      deactivated: true,
+      deactivateAt,
+    });
   }
-  @Post('generate/:organizationId')
-  generateAPIKey(
+  @Post('apikey/generate/:organizationId')
+  async generateAPIKey(
     @Param(new ValidationPipe({ whitelist: true })) data: OrganizationIdDTO,
   ) {
-    this.authService.createAPIKey(data.organizationId);
+    return this.authService.createAPIKey(data.organizationId);
   }
-  @Patch('deactivate')
-  deactivateAPIKey(
+  @Patch('apikey/deactivate')
+  async deactivateAPIKey(
     @Body(new ValidationPipe({ whitelist: true })) data: DeactivateAPIKeyDTO,
   ) {
     return this.authService.updateAPIKey(
-      { apiKey: data.api_key },
-      { deactivatedAt: data.date },
+      { apiKey: data.apiKey },
+      { deactivateAt: data.date, deactivated: true },
     );
   }
 }

@@ -4,9 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, Account, APIKey } from '@prisma/client';
-import { GenerateAPIKey } from 'src/common/helper/generate_api_keys';
+import { PrismaService } from '../../prisma/prisma.service';
+import { GenerateAPIKey } from 'src/common/helper/apikey/apikey.service';
 
 @Injectable()
 export class AuthService {
@@ -58,16 +58,22 @@ export class AuthService {
       throw err;
     }
   }
-  async getAPIKey(where: Prisma.APIKeyWhereInput): Promise<APIKey | null> {
+  async getAPIKey(
+    where: Prisma.APIKeyWhereUniqueInput,
+  ): Promise<APIKey | null> {
     try {
-      const API_Key = await this.prismaService.aPIKey.findFirst({
+      if (!where.apiKey) {
+        throw new BadRequestException('Missing api-key');
+      }
+      const API_Key = await this.prismaService.aPIKey.findUnique({
         where,
+        include: { account: true },
       });
       if (!API_Key) {
         throw new NotFoundException('Not found');
       }
       if (API_Key?.deactivated) {
-        throw new BadRequestException('API key deactivated');
+        throw new BadRequestException('Api-key deactivated');
       }
       return API_Key;
     } catch (err) {

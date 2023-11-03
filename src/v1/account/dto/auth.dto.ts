@@ -5,7 +5,6 @@ import {
   IsOptional,
   IsString,
   IsUUID,
-  MinDate,
 } from 'class-validator';
 
 export class CreateAccountDTO {
@@ -17,15 +16,15 @@ export class CreateAccountDTO {
   @IsNotEmpty()
   organizationId: string;
 }
+
 export class DeactivateAPIKeyDTO {
   @IsString()
   @IsNotEmpty()
-  api_key: string;
+  apiKey: string;
 
-  @MinDate(() => new Date(Date.now()))
   @IsDate()
   @IsOptional()
-  date: string;
+  date?: Date = new Date(Date.now());
 }
 
 export class OrganizationIdDTO

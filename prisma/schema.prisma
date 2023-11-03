@@ -11,22 +11,22 @@ datasource db {
 }
 
 model Account {
-  id             String   @id @default(uuid()) @db.Uuid
-  organizationId String   @unique @db.Uuid()
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @unique @db.Uuid()
   name           String?
-  email          String   @unique
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  email          String    @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   apiKeys        APIKey[]
-  deactivated    Boolean  @default(true)
-  deactivatedAt  DateTime?
+  deactivated    Boolean   @default(true)
+  deactivateAt   DateTime?
 }
 
 model APIKey {
   id             Int       @id @default(autoincrement())
   apiKey         String?   @unique()
   deactivated    Boolean   @default(false)
-  deactivatedAt  DateTime?
+  deactivateAt   DateTime?
   createdAt      DateTime  @default(now())
   organizationId String    @db.Uuid()
   account        Account   @relation(fields: [organizationId], references: [organizationId])
