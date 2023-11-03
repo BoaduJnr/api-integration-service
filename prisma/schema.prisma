@@ -19,6 +19,7 @@ model Account {
   updatedAt      DateTime @updatedAt
   apiKeys        APIKey[]
   deactivated    Boolean  @default(true)
+  deactivatedAt  DateTime?
 }
 
 model APIKey {
