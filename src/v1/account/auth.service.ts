@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -15,6 +16,7 @@ export class AuthService {
     try {
       return await this.prismaService.account.create({ data });
     } catch (err) {
+      console.log(err);
       if (err.code === 'P2002') {
         throw new ForbiddenException('Credentials taken');
       }
@@ -28,7 +30,7 @@ export class AuthService {
     try {
       const account = await this.prismaService.account.findUnique({
         where,
-        include: { revoke: true },
+        include: { apiKeys: true },
       });
 
       if (!account) {
@@ -39,31 +41,46 @@ export class AuthService {
       throw err;
     }
   }
-  async getAPIKey(
-    where: Prisma.APIKeyWhereUniqueInput,
-  ): Promise<APIKey | null> {
+  async updateAccount(
+    where: Prisma.AccountWhereUniqueInput,
+    data: Prisma.AccountUpdateInput,
+  ): Promise<Account | null> {
     try {
-      const API_Key = await this.prismaService.aPIKey.findUnique({
+      return await this.prismaService.account.update({
         where,
+        data,
       });
-
-      if (!API_Key) {
-        throw new NotFoundException('Not found');
-      }
-      return API_Key;
     } catch (err) {
       throw err;
     }
   }
+  async getAPIKey(where: Prisma.APIKeyWhereInput): Promise<APIKey | null> {
+    try {
+      const API_Key = await this.prismaService.aPIKey.findFirst({
+        where,
+      });
+      if (!API_Key) {
+        throw new NotFoundException('Not found');
+      }
+      if (API_Key?.deactivated) {
+        throw new BadRequestException('API key deactivated');
+      }
+      return API_Key;
+    } catch (err) {
+      console.log(err);
 
-  async generateAPIKey(data: Prisma.APIKeyCreateInput) {
+      throw err;
+    }
+  }
+
+  async createAPIKey(data: Prisma.APIKeyCreateInput) {
     try {
       return await this.prismaService.aPIKey.create({ data });
     } catch (err) {
       throw err;
     }
   }
-  async deactivateAPIKey(
+  async updateAPIKey(
     where: Prisma.APIKeyWhereUniqueInput,
     data: Prisma.APIKeyUpdateInput,
   ) {

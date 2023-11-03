@@ -11,20 +11,18 @@ datasource db {
 }
 
 model Account {
-  id             String       @id @default(uuid()) @db.Uuid
-  organizationId String       @unique @db.Uuid()
-  email          String       @unique
-  API_Key        String       @unique @map("api_key") @db.VarChar(255)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  revoke         APIKey[]
- 
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @unique @db.Uuid()
+  email          String   @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  apiKeys        APIKey[]
+  deactivated    Boolean  @default(true)
 }
-
 
 model APIKey {
   id             Int       @id
-  API_key        String
+  apiKey         String    @unique()
   deactivated    Boolean   @default(false)
   deactivatedAt  DateTime?
   createdAt      DateTime  @default(now())

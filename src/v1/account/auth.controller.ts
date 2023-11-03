@@ -2,12 +2,17 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Patch,
   Post,
   ValidationPipe,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateAccountDTO } from './dto/auth.dto';
+import {
+  CreateAccountDTO,
+  DeactivateAPIKeyDTO,
+  OrganizationIdDTO,
+} from './dto/auth.dto';
 import { APIKey } from './decorators';
 
 @Controller('account')
@@ -18,20 +23,36 @@ export class AuthController {
   async createAccount(
     @Body(new ValidationPipe({ whitelist: true })) data: CreateAccountDTO,
   ) {
-    data.API_Key = 'trying';
     return this.authService.createAccount(data);
   }
-
-  @Get('verify')
-  verifyAPIKey(@APIKey('X-API-KEY') API_Key: string) {
-    return this.authService.getAccount({ API_Key });
+  @Get('verifyKey')
+  async verifyAPIKey(@APIKey('X-API-KEY') apiKey: string) {
+    const { organizationId } = await this.authService.getAPIKey({ apiKey });
+    return this.authService.getAccount({ organizationId });
+  }
+  @Get(':organizationId')
+  async getAccount(
+    @Param(new ValidationPipe({ whitelist: true })) data: OrganizationIdDTO,
+  ) {
+    return this.authService.getAccount(data);
+  }
+  @Patch(':organizationId')
+  async deactivateAccount(
+    @Param(new ValidationPipe({ whitelist: true })) where: OrganizationIdDTO,
+  ) {
+    return this.authService.updateAccount(where, { deactivated: true });
   }
   @Post('generate')
   generateAPIKey() {
     return { msg: 'login' };
   }
   @Patch('deactivate')
-  deactivateAPIKey() {
-    return { msg: 'login' };
+  deactivateAPIKey(
+    @Body(new ValidationPipe({ whitelist: true })) data: DeactivateAPIKeyDTO,
+  ) {
+    return this.authService.updateAPIKey(
+      { apiKey: data.api_key },
+      { deactivatedAt: data.date },
+    );
   }
 }

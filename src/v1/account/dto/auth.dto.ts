@@ -1,9 +1,11 @@
 import {
+  IsDate,
   IsEmail,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
+  MinDate,
 } from 'class-validator';
 
 export class CreateAccountDTO {
@@ -11,10 +13,24 @@ export class CreateAccountDTO {
   @IsNotEmpty()
   email: string;
 
+  @IsUUID()
+  @IsNotEmpty()
+  organizationId: string;
+}
+export class DeactivateAPIKeyDTO {
   @IsString()
-  @IsOptional()
-  API_Key: string;
+  @IsNotEmpty()
+  api_key: string;
 
+  @MinDate(() => new Date(Date.now()))
+  @IsDate()
+  @IsOptional()
+  date: string;
+}
+
+export class OrganizationIdDTO
+  implements Pick<CreateAccountDTO, 'organizationId'>
+{
   @IsUUID()
   @IsNotEmpty()
   organizationId: string;
