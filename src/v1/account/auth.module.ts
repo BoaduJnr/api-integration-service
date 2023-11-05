@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { APIKey } from 'src/common/helper/apikey/apikey.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { GenerateAPIKey } from './apikey.service';
 
 @Module({
-  providers: [AuthService],
+  imports: [ScheduleModule.forRoot()],
+  providers: [AuthService, GenerateAPIKey],
   controllers: [AuthController],
-  imports: [APIKey],
 })
 export class AuthModule {}

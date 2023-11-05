@@ -2,14 +2,17 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma, Account, APIKey } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { GenerateAPIKey } from 'src/common/helper/apikey/apikey.service';
+import { GenerateAPIKey } from './apikey.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     private prismaService: PrismaService,
     private apiKeyGenerator: GenerateAPIKey,
@@ -20,7 +23,7 @@ export class AuthService {
     try {
       return await this.prismaService.account.create({ data });
     } catch (err) {
-      console.log(err);
+      this.logger.log(err);
       if (err.code === 'P2002') {
         throw new ForbiddenException('Credentials taken');
       }
@@ -101,6 +104,26 @@ export class AuthService {
       return await this.prismaService.aPIKey.update({ where, data });
     } catch (err) {
       throw err;
+    }
+  }
+
+  @Cron(CronExpression.EVERY_10_SECONDS)
+  triggerDeactivations() {
+    try {
+      this.prismaService.$transaction(async (tsx) => {
+        this.logger.log('Job is running');
+        const date = new Date(Date.now());
+        await tsx.aPIKey.updateMany({
+          where: { deactivateAt: { lte: date } },
+          data: { deactivated: true },
+        });
+        await tsx.account.updateMany({
+          where: { deactivateAt: { lte: date } },
+          data: { deactivated: true },
+        });
+      });
+    } catch (err) {
+      this.logger.log(err);
     }
   }
 }

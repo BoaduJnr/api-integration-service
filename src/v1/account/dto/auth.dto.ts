@@ -1,5 +1,5 @@
 import {
-  IsDate,
+  IsDateString,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -18,13 +18,15 @@ export class CreateAccountDTO {
 }
 
 export class DeactivateAPIKeyDTO {
+  currentDatePlusFiveMilliseconds = new Date(Date.now() + 1 * 5000);
+
   @IsString()
   @IsNotEmpty()
   apiKey: string;
 
-  @IsDate()
+  @IsDateString()
   @IsOptional()
-  date?: Date = new Date(Date.now());
+  date?: Date = this.currentDatePlusFiveMilliseconds;
 }
 
 export class OrganizationIdDTO

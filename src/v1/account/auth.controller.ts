@@ -53,11 +53,17 @@ export class AuthController {
   }
   @Patch('apikey/deactivate')
   async deactivateAPIKey(
-    @Body(new ValidationPipe({ whitelist: true })) data: DeactivateAPIKeyDTO,
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+      }),
+    )
+    data: DeactivateAPIKeyDTO,
   ) {
     return this.authService.updateAPIKey(
       { apiKey: data.apiKey },
-      { deactivateAt: data.date, deactivated: true },
+      { deactivateAt: data.date },
     );
   }
 }
