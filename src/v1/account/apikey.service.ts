@@ -1,7 +1,7 @@
 export class GenerateAPIKey {
   private generateRandomString(length: number): string {
     const characters =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%^&*_+=';
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%^&*+=';
     let randomString = '';
 
     for (let i = 0; i < length; i++) {
@@ -14,7 +14,7 @@ export class GenerateAPIKey {
 
   private generateChecksum(input: string): string {
     // Generate the checksum logic here (e.g., based on the input)
-    // For demonstration purposes, we'll use a simple hash of the input
+    // we'll use a simple hash of the input
     const checksum = input
       .split('')
       .map((char) => char.charCodeAt(0))

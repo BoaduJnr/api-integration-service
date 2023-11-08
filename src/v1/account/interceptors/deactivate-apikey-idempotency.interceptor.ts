@@ -10,6 +10,7 @@ import { map } from 'rxjs/operators';
 @Injectable()
 export class DeactivateApiKeyIdempotencyInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const request = context.switchToHttp().getRequest();
     return next.handle().pipe(map((value) => (value === null ? '' : value)));
   }
 }

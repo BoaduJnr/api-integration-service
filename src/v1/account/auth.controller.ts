@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   Param,
   Patch,
   Post,
@@ -17,7 +18,12 @@ import { APIKey } from './decorators';
 
 @Controller('account')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private logger: Logger,
+  ) {
+    this.logger.log(AuthController.name);
+  }
 
   @Post('register')
   async createAccount(

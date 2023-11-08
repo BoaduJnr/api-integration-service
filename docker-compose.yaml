@@ -5,8 +5,18 @@ services:
     ports:
       - '5432:5432'
     environment:
-
       - POSTGRESQL_USERNAME=api_integration
       - POSTGRESQL_PASSWORD=password123
       - POSTGRESQL_DATABASE=api_integration_database
- 
+    depends_on:
+      - api-integration-redis
+  api-integration-redis:
+    image: "bitnami/redis:latest"
+    container_name: api-integration-redis
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "6379:6379"
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_PORT_NUMBER=6379

@@ -37,3 +37,8 @@ model APIKey {
 //cache response for minimize latencey and database call
 //Hide keys untill needed in frontend
 //use underscore to break keys
+
+
+//app level
+//rate limiting 
+//jot auth

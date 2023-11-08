@@ -6,17 +6,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Prisma, Account, APIKey } from '@prisma/client';
+import { Prisma, Account } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GenerateAPIKey } from './apikey.service';
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
   constructor(
     private prismaService: PrismaService,
     private apiKeyGenerator: GenerateAPIKey,
-  ) {}
+    private logger: Logger,
+  ) {
+    this.logger.log(AuthService.name);
+  }
   async createAccount(
     data: Prisma.AccountCreateInput,
   ): Promise<Account | null> {
@@ -61,9 +63,7 @@ export class AuthService {
       throw err;
     }
   }
-  async getAPIKey(
-    where: Prisma.APIKeyWhereUniqueInput,
-  ): Promise<APIKey | null> {
+  async getAPIKey(where: Prisma.APIKeyWhereUniqueInput): Promise<Account> {
     try {
       if (!where.apiKey) {
         throw new BadRequestException('Missing api-key');
@@ -78,7 +78,8 @@ export class AuthService {
       if (API_Key?.deactivated) {
         throw new BadRequestException('Api-key deactivated');
       }
-      return API_Key;
+      const account = { ...API_Key.account, permissions: ['admin'] };
+      return account;
     } catch (err) {
       console.log(err);
 
@@ -101,26 +102,38 @@ export class AuthService {
     data: Prisma.APIKeyUpdateInput,
   ) {
     try {
-      return await this.prismaService.aPIKey.update({ where, data });
+      const { apiKey, deactivateAt } = await this.prismaService.aPIKey.update({
+        where,
+        data,
+      });
+
+      return {
+        apiKey,
+        deactivateTime: deactivateAt,
+        message: `${
+          where.apiKey
+        } will be deactivated at ${deactivateAt.toUTCString()}`,
+      };
     } catch (err) {
       throw err;
     }
   }
 
-  @Cron(CronExpression.EVERY_10_SECONDS)
-  triggerDeactivations() {
+  @Cron(CronExpression.EVERY_5_SECONDS)
+  async triggerDeactivations() {
     try {
-      this.prismaService.$transaction(async (tsx) => {
-        this.logger.log('Job is running');
+      await this.prismaService.$transaction(async (tsx) => {
         const date = new Date(Date.now());
-        await tsx.aPIKey.updateMany({
-          where: { deactivateAt: { lte: date } },
+        const apiKeys = await tsx.aPIKey.updateMany({
+          where: { deactivateAt: { lte: date }, deactivated: false },
           data: { deactivated: true },
         });
-        await tsx.account.updateMany({
-          where: { deactivateAt: { lte: date } },
+        const accounts = await tsx.account.updateMany({
+          where: { deactivateAt: { lte: date }, deactivated: false },
           data: { deactivated: true },
         });
+
+        return [apiKeys, accounts];
       });
     } catch (err) {
       this.logger.log(err);

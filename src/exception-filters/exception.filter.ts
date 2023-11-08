@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { CustomErrorResponse } from './http-exception.interface';
+import { CustomErrorResponse } from './exception.interface';
 import * as fs from 'fs';
 
 @Catch()
