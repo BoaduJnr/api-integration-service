@@ -16,7 +16,7 @@ import {
 } from './dto/auth.dto';
 import { APIKey } from './decorators';
 
-@Controller('account')
+@Controller({ path: 'account', version: '1' })
 export class AuthController {
   constructor(
     private authService: AuthService,

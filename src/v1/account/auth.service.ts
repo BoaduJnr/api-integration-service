@@ -6,9 +6,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Prisma, Account } from '@prisma/client';
+import { Prisma, Account, APIKey } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GenerateAPIKey } from './apikey.service';
+import { RedisCacheService } from '../../common/redisCache/redisCache.service';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +17,7 @@ export class AuthService {
     private prismaService: PrismaService,
     private apiKeyGenerator: GenerateAPIKey,
     private logger: Logger,
+    private redisCache: RedisCacheService,
   ) {
     this.logger.log(AuthService.name);
   }
@@ -23,7 +25,16 @@ export class AuthService {
     data: Prisma.AccountCreateInput,
   ): Promise<Account | null> {
     try {
-      return await this.prismaService.account.create({ data });
+      let account = await this.redisCache.get<Account>(
+        `${data.organizationId}:account`,
+      );
+      this.logger.log(account);
+      if (!account) {
+        account = await this.prismaService.account.create({ data });
+      }
+      await this.redisCache.set(`${data.organizationId}:account`, account);
+
+      return account;
     } catch (err) {
       this.logger.log(err);
       if (err.code === 'P2002') {
@@ -37,11 +48,17 @@ export class AuthService {
     where: Prisma.AccountWhereUniqueInput,
   ): Promise<Account | null> {
     try {
-      const account = await this.prismaService.account.findUnique({
+      let account = await this.redisCache.get<Account>(
+        `${where.organizationId}:account`,
+      );
+      if (account) {
+        return account;
+      }
+      account = await this.prismaService.account.findUnique({
         where,
         include: { apiKeys: true },
       });
-
+      await this.redisCache.set(`${where.organizationId}:account`, account);
       if (!account) {
         throw new NotFoundException('Not found');
       }
@@ -55,19 +72,18 @@ export class AuthService {
     data: Prisma.AccountUpdateInput,
   ): Promise<Account | null> {
     try {
-      return await this.prismaService.account.update({
+      const account = await this.prismaService.account.update({
         where,
         data,
       });
+      await this.redisCache.del(`${where.organizationId}:account`);
+      return account;
     } catch (err) {
       throw err;
     }
   }
   async getAPIKey(where: Prisma.APIKeyWhereUniqueInput): Promise<Account> {
     try {
-      if (!where.apiKey) {
-        throw new BadRequestException('Missing api-key');
-      }
       const API_Key = await this.prismaService.aPIKey.findUnique({
         where,
         include: { account: true },
@@ -78,21 +94,32 @@ export class AuthService {
       if (API_Key?.deactivated) {
         throw new BadRequestException('Api-key deactivated');
       }
-      const account = { ...API_Key.account, permissions: ['admin'] };
+      const account: Omit<
+        Account & { permissions: string[] },
+        'deactivateAt, updatedAt'
+      > = {
+        ...API_Key.account,
+        permissions: ['admin'],
+      };
+
       return account;
     } catch (err) {
-      console.log(err);
-
       throw err;
     }
   }
 
   async createAPIKey(organizationId: string) {
     try {
-      const apiKey = this.apiKeyGenerator.generateRandomStringWithChecksum();
-      return await this.prismaService.aPIKey.create({
-        data: { apiKey, organizationId },
-      });
+      let savedKey = await this.redisCache.get<APIKey>(`${organizationId}:key`);
+      if (!savedKey) {
+        const apiKey = this.apiKeyGenerator.generateRandomStringWithChecksum();
+        savedKey = await this.prismaService.aPIKey.create({
+          data: { apiKey, organizationId },
+        });
+      }
+
+      this.redisCache.set(`${organizationId}:key`, savedKey, 1000);
+      return savedKey;
     } catch (err) {
       throw err;
     }
@@ -102,11 +129,12 @@ export class AuthService {
     data: Prisma.APIKeyUpdateInput,
   ) {
     try {
-      const { apiKey, deactivateAt } = await this.prismaService.aPIKey.update({
-        where,
-        data,
-      });
-
+      const { apiKey, deactivateAt, organizationId } =
+        await this.prismaService.aPIKey.update({
+          where,
+          data,
+        });
+      await this.redisCache.del(`${organizationId}:key`);
       return {
         apiKey,
         deactivateTime: deactivateAt,
@@ -136,7 +164,7 @@ export class AuthService {
         return [apiKeys, accounts];
       });
     } catch (err) {
-      this.logger.log(err);
+      throw err;
     }
   }
 }

@@ -1,11 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class RedisCacheService {
-  constructor() {}
+  constructor(
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private logger: Logger,
+  ) {
+    this.logger.log(RedisCacheService.name);
+  }
 
   async get<T>(key: string): Promise<T | null> {
-    const cachedData = await this.client.get(key);
+    const cachedData = await this.cacheManager.get<string>(key);
 
     if (!cachedData) {
       return null;
@@ -14,50 +21,18 @@ export class RedisCacheService {
     return JSON.parse(cachedData);
   }
 
-  async set<T>(
-    key: string,
-    data: T,
-    expirationInSeconds?: number,
-  ): Promise<void> {
+  async set<T>(key: string, data: T, expirationInSeconds = 0): Promise<void> {
     const serializedData = JSON.stringify(data);
 
-    if (expirationInSeconds) {
-      await this.client.setex(key, expirationInSeconds, serializedData);
-    } else {
-      await this.client.set(key, serializedData);
-    }
+    await this.cacheManager.set(key, serializedData, expirationInSeconds);
   }
 
   async del(key: string): Promise<void> {
-    await this.client.del(key);
+    await this.cacheManager.del(key);
   }
 
   async clearCache(): Promise<void> {
     // Use with caution: This will clear the entire Redis cache.
-    await this.client.flushdb();
-  }
-  async deleteByPattern(pattern: string): Promise<number> {
-    // Use the SCAN command to find keys matching the pattern
-    let cursor = '0';
-    let deletedKeys = 0;
-
-    do {
-      const [newCursor, keys] = await this.client.scan(
-        cursor,
-        'MATCH',
-        pattern,
-      );
-      // Delete the keys found in this iteration
-      if (keys.length > 0) {
-        await this.client.del(...keys);
-        deletedKeys += keys.length;
-      }
-
-      // Update the cursor for the next iteration
-      cursor = newCursor;
-    } while (cursor !== '0');
-
-    return deletedKeys;
+    await this.cacheManager.reset();
   }
 }
-

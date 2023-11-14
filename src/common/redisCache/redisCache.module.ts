@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Logger, Module } from '@nestjs/common';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
 import { RedisClientOptions } from 'redis';
@@ -9,13 +9,13 @@ import { RedisCacheService } from './redisCache.service';
     CacheModule.register<RedisClientOptions>({
       store: redisStore,
       socket: {
-        host: process.env.REDIS_HOST ?? 'localhost',
-        port: parseInt(process.env.REDIS_PORT ?? '6379'),
+        host: process.env.REDIS_HOST,
+        port: parseInt(process.env.REDIS_PORT),
       },
     }),
   ],
 
-  providers: [RedisCacheService],
+  providers: [RedisCacheService, Logger],
   exports: [RedisCacheService],
 })
 export class AppCacheModule {}
