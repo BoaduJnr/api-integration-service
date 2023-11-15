@@ -112,7 +112,8 @@ export class AuthService {
     try {
       let savedKey = await this.redisCache.get<APIKey>(`${organizationId}:key`);
       if (!savedKey) {
-        const apiKey = this.apiKeyGenerator.generateRandomStringWithChecksum();
+        const apiKey =
+          await this.apiKeyGenerator.generateRandomStringWithChecksum();
         savedKey = await this.prismaService.aPIKey.create({
           data: { apiKey, organizationId },
         });

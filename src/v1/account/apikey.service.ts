@@ -1,5 +1,5 @@
 export class GenerateAPIKey {
-  private generateRandomString(length: number): string {
+  private async generateRandomString(length: number): Promise<string> {
     const characters =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%^&*+=';
     let randomString = '';
@@ -12,7 +12,7 @@ export class GenerateAPIKey {
     return randomString;
   }
 
-  private generateChecksum(input: string): string {
+  private async generateChecksum(input: string) {
     // Generate the checksum logic here (e.g., based on the input)
     // we'll use a simple hash of the input
     const checksum = input
@@ -25,20 +25,20 @@ export class GenerateAPIKey {
     return checksum;
   }
 
-  generateRandomStringWithChecksum(): string {
+  async generateRandomStringWithChecksum() {
     const randomPartLength = 18;
 
-    const randomPart = this.generateRandomString(randomPartLength);
-    const checksum = this.generateChecksum(randomPart);
+    const randomPart = await this.generateRandomString(randomPartLength);
+    const checksum = await this.generateChecksum(randomPart);
 
     return `${randomPart}_${checksum}`;
   }
-  validateChecksum(randomStringWithChecksum: string): boolean {
+  async validateChecksum(randomStringWithChecksum: string) {
     // Split the input string into the random part and the provided checksum
     const [randomPart, providedChecksum] = randomStringWithChecksum.split('_');
 
     // Generate the checksum for the random part using the same logic
-    const recreatedChecksum = this.generateChecksum(randomPart);
+    const recreatedChecksum = await this.generateChecksum(randomPart);
 
     return recreatedChecksum === providedChecksum;
   }

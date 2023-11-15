@@ -10,7 +10,7 @@ import { RedisCacheService } from './redisCache.service';
       store: redisStore,
       socket: {
         host: process.env.REDIS_HOST,
-        port: parseInt(process.env.REDIS_PORT),
+        port: +process.env.REDIS_PORT,
       },
     }),
   ],
