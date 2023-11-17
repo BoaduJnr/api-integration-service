@@ -2,12 +2,13 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma, Account, APIKey } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../common/prisma/prisma.service';
 import { GenerateAPIKey } from './apikey.service';
 import { RedisCacheService } from '../../common/redisCache/redisCache.service';
 
@@ -26,21 +27,22 @@ export class AuthService {
   ): Promise<Account | null> {
     try {
       let account = await this.redisCache.get<Account>(
-        `${data.organizationId}:account`,
+        `${data.organizationId}:create:account`,
       );
-      this.logger.log(account);
       if (!account) {
         account = await this.prismaService.account.create({ data });
       }
-      await this.redisCache.set(`${data.organizationId}:account`, account);
+      await this.redisCache.set(
+        `${data.organizationId}:create:account`,
+        account,
+      );
 
       return account;
     } catch (err) {
-      this.logger.log(err);
       if (err.code === 'P2002') {
         throw new ForbiddenException('Credentials taken');
       }
-      throw err;
+      throw new InternalServerErrorException('Error creating account');
     }
   }
 
@@ -64,7 +66,7 @@ export class AuthService {
       }
       return account;
     } catch (err) {
-      throw err;
+      throw new InternalServerErrorException('Error getting account');
     }
   }
   async updateAccount(
@@ -79,10 +81,12 @@ export class AuthService {
       await this.redisCache.del(`${where.organizationId}:account`);
       return account;
     } catch (err) {
-      throw err;
+      throw new InternalServerErrorException('Error updating account');
     }
   }
-  async getAPIKey(where: Prisma.APIKeyWhereUniqueInput): Promise<Account> {
+  async getAccountByValidApiKey(
+    where: Prisma.APIKeyWhereUniqueInput,
+  ): Promise<Account> {
     try {
       const API_Key = await this.prismaService.aPIKey.findUnique({
         where,
@@ -99,12 +103,14 @@ export class AuthService {
         'deactivateAt, updatedAt'
       > = {
         ...API_Key.account,
-        permissions: ['admin'],
+        permissions: ['manage domain'],
       };
 
       return account;
     } catch (err) {
-      throw err;
+      throw new InternalServerErrorException(
+        'Error getting valid account using api key',
+      );
     }
   }
 
@@ -122,7 +128,7 @@ export class AuthService {
       this.redisCache.set(`${organizationId}:key`, savedKey, 1000);
       return savedKey;
     } catch (err) {
-      throw err;
+      throw new InternalServerErrorException('Error creating API key');
     }
   }
   async updateAPIKey(
@@ -144,7 +150,7 @@ export class AuthService {
         } will be deactivated at ${deactivateAt.toUTCString()}`,
       };
     } catch (err) {
-      throw err;
+      throw new InternalServerErrorException('Error deactivating API key');
     }
   }
 
@@ -165,7 +171,7 @@ export class AuthService {
         return [apiKeys, accounts];
       });
     } catch (err) {
-      throw err;
+      throw new InternalServerErrorException('Cron job failed');
     }
   }
 }

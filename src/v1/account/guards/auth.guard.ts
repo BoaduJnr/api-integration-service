@@ -9,6 +9,15 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 
+type TPayload = {
+  organizationId: string;
+  email: string;
+  permissions: string[];
+  role?: string;
+  userId?: string;
+  system?: boolean;
+};
+
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
@@ -20,17 +29,21 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
     if (!token) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('Missing token');
     }
+    let payload: TPayload;
     try {
-      const payload = await this.jwtService.verifyAsync(token, {
+      payload = await this.jwtService.verifyAsync(token, {
         secret: this.config.get<string>('JWT_SECRET'),
       });
-      // 💡 We assign the payload to the request object here
-      // so that we can access it in our route handlers
-      request['account'] = payload;
-    } catch {
-      throw new BadRequestException('Invalid Token');
+    } catch (err) {
+      throw new BadRequestException('Invalid token');
+    }
+    // 💡 We assign the payload to the request object here
+    // so that we can access it in our route handlers
+    request['account'] = payload;
+    if (!request['account'].permissions.includes('manage domain')) {
+      throw new UnauthorizedException('Not authorised');
     }
     return true;
   }
