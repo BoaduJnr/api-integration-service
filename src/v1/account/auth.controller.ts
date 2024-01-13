@@ -61,7 +61,7 @@ export class AuthController {
       deactivateAt,
     });
   }
-  @UseGuards(AuthGuard)
+  // @UseGuards(AuthGuard)
   @Post('apikey/generate/:organizationId')
   async generateAPIKey(
     @Param(new ValidationPipe({ whitelist: true }))

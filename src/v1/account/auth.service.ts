@@ -67,7 +67,9 @@ export class AuthService {
       throw new InternalServerErrorException('Error getting account');
     }
     if (!account) {
-      throw new NotFoundException('Not found');
+      throw new NotFoundException(
+        `Account with ID: ${where.organizationId} not found`,
+      );
     }
     await this.redisCache.set(`${where.organizationId}:account`, account);
     return account;
@@ -120,21 +122,26 @@ export class AuthService {
   }
 
   async createAPIKey(organizationId: string) {
-    const apiKey =
-      await this.apiKeyGenerator.generateRandomStringWithChecksum();
     try {
-      const hashedKey = await this.hash.hashKey(apiKey);
+      let apiKey = await this.redisCache.get<string>(`${organizationId}:key`);
 
-      await this.prismaService.aPIKey.updateMany({
-        where: { organizationId, deactivated: false },
-        data: { deactivated: true, deactivateAt: new Date(Date.now()) },
-      });
+      if (!apiKey) {
+        apiKey = await this.apiKeyGenerator.generateRandomStringWithChecksum();
 
-      await this.prismaService.aPIKey.create({
-        data: { apiKey: hashedKey, organizationId },
-      });
+        const hashedKey = await this.hash.hashKey(apiKey);
 
+        await this.prismaService.aPIKey.updateMany({
+          where: { organizationId, deactivated: false },
+          data: { deactivated: true, deactivateAt: new Date(Date.now()) },
+        });
+
+        await this.prismaService.aPIKey.create({
+          data: { apiKey: hashedKey, organizationId },
+        });
+      }
       await this.redisCache.del(`${organizationId}:account`);
+      await this.redisCache.set(`${organizationId}:key`, apiKey, 1000);
+
       return apiKey;
     } catch (err) {
       console.log(err);
