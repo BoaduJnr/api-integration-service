@@ -12,7 +12,7 @@ services:
       - redis-cache
   redis-cache:
     image: 'bitnami/redis:latest'
-    container_name: api-integration-redis
+    container_name: api-key-redis
     restart: unless-stopped
     tty: true
     ports:

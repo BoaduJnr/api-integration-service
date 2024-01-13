@@ -10,6 +10,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
+
+
 model Account {
   id             String    @id @default(uuid()) @db.Uuid
   organizationId String    @unique @db.Uuid()
@@ -18,7 +21,7 @@ model Account {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   apiKeys        APIKey[]
-  deactivated    Boolean   @default(true)
+  deactivated    Boolean   @default(false)
   deactivateAt   DateTime?
 }
 
@@ -32,13 +35,3 @@ model APIKey {
   account        Account   @relation(fields: [organizationId], references: [organizationId])
 }
 
-//rolling for revoking
-//checksum for quick rejection
-//cache response for minimize latencey and database call
-//Hide keys untill needed in frontend
-//use underscore to break keys
-
-
-//app level
-//rate limiting 
-//jot auth

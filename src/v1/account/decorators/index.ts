@@ -1,1 +1,1 @@
-export { APIKey } from './apiKey-header.decorator';
+export * from './apiKey-header.decorator';

@@ -6,7 +6,9 @@ export class MailService {
   constructor(
     private mailerService: MailerService,
     private logger: Logger,
-  ) {}
+  ) {
+    this.logger.log(MailService.name);
+  }
 
   async sendMail(
     emails: string[],

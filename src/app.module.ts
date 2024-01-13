@@ -6,6 +6,7 @@ import { AppCacheModule } from './common/redisCache/redisCache.module';
 import { MailModule } from './common/mail/mail.module';
 import { APP_FILTER } from '@nestjs/core';
 import { ExceptionHandlerFilter } from './exception-filters';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { ExceptionHandlerFilter } from './exception-filters';
     AppModule,
     MailModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [
     Logger,
     {

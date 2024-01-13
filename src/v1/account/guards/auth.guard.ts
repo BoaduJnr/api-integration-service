@@ -37,6 +37,9 @@ export class AuthGuard implements CanActivate {
         secret: this.config.get<string>('JWT_SECRET'),
       });
     } catch (err) {
+      if (err.name == 'TokenExpiredError') {
+        throw new UnauthorizedException('Expired token');
+      }
       throw new BadRequestException('Invalid token');
     }
     // 💡 We assign the payload to the request object here
@@ -44,6 +47,14 @@ export class AuthGuard implements CanActivate {
     request['account'] = payload;
     if (!request['account'].permissions.includes('manage domain')) {
       throw new UnauthorizedException('Not authorised');
+    }
+    if (
+      request.params.organizationId &&
+      !request['account'].organizationId !== request.params.organizationId
+    ) {
+      throw new UnauthorizedException(
+        'Access denied. Wrong organization domain',
+      );
     }
     return true;
   }

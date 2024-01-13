@@ -18,7 +18,9 @@ export class ExceptionHandlerFilter implements ExceptionFilter {
   constructor(
     private readonly logger: Logger,
     private mailer: MailService,
-  ) {}
+  ) {
+    this.logger.log(ExceptionHandlerFilter.name);
+  }
   catch(exception: HttpException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -26,7 +28,7 @@ export class ExceptionHandlerFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
-      const message = exception.message;
+      const message = exception.getResponse()['message'] ?? exception.message;
       const errorResponse = this.getErrorResponse(request, message);
       response.status(status).send(errorResponse);
     } else {

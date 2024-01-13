@@ -6,17 +6,18 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma, Account, APIKey } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { GenerateAPIKey } from './apikey.service';
+import { GenerateAPIKey } from './utils/apikey/apikey.service';
 import { RedisCacheService } from '../../common/redisCache/redisCache.service';
+import { HashService } from './utils/hashing/hash.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prismaService: PrismaService,
     private apiKeyGenerator: GenerateAPIKey,
+    private hash: HashService,
     private logger: Logger,
     private redisCache: RedisCacheService,
   ) {
@@ -49,8 +50,9 @@ export class AuthService {
   async getAccount(
     where: Prisma.AccountWhereUniqueInput,
   ): Promise<Account | null> {
+    let account: Account;
     try {
-      let account = await this.redisCache.get<Account>(
+      account = await this.redisCache.get<Account>(
         `${where.organizationId}:account`,
       );
       if (account) {
@@ -60,14 +62,15 @@ export class AuthService {
         where,
         include: { apiKeys: true },
       });
-      await this.redisCache.set(`${where.organizationId}:account`, account);
-      if (!account) {
-        throw new NotFoundException('Not found');
-      }
-      return account;
     } catch (err) {
+      this.logger.log(err);
       throw new InternalServerErrorException('Error getting account');
     }
+    if (!account) {
+      throw new NotFoundException('Not found');
+    }
+    await this.redisCache.set(`${where.organizationId}:account`, account);
+    return account;
   }
   async updateAccount(
     where: Prisma.AccountWhereUniqueInput,
@@ -81,53 +84,60 @@ export class AuthService {
       await this.redisCache.del(`${where.organizationId}:account`);
       return account;
     } catch (err) {
+      this.logger.log(err);
       throw new InternalServerErrorException('Error updating account');
     }
   }
-  async getAccountByValidApiKey(
-    where: Prisma.APIKeyWhereUniqueInput,
-  ): Promise<Account> {
+  async getAccountByValidApiKey(ApiKey: string): Promise<Account> {
+    const haskedKey = await this.hash.hashKey(ApiKey);
+    let apiKey: APIKey & { account: Account };
     try {
-      const API_Key = await this.prismaService.aPIKey.findUnique({
-        where,
+      apiKey = await this.prismaService.aPIKey.findUnique({
+        where: { apiKey: haskedKey },
         include: { account: true },
       });
-      if (!API_Key) {
-        throw new NotFoundException('Not found');
-      }
-      if (API_Key?.deactivated) {
-        throw new BadRequestException('Api-key deactivated');
-      }
-      const account: Omit<
-        Account & { permissions: string[] },
-        'deactivateAt, updatedAt'
-      > = {
-        ...API_Key.account,
-        permissions: ['manage domain'],
-      };
-
-      return account;
     } catch (err) {
+      this.logger.log(err);
       throw new InternalServerErrorException(
         'Error getting valid account using api key',
       );
     }
+    if (!apiKey) {
+      throw new NotFoundException('Not found');
+    }
+    if (apiKey?.deactivated) {
+      throw new BadRequestException('Api-key deactivated');
+    }
+    const account: Omit<
+      Account & { permissions: string[] },
+      'deactivateAt, updatedAt'
+    > = {
+      ...apiKey.account,
+      permissions: ['manage domain'],
+    };
+
+    return account;
   }
 
   async createAPIKey(organizationId: string) {
+    const apiKey =
+      await this.apiKeyGenerator.generateRandomStringWithChecksum();
     try {
-      let savedKey = await this.redisCache.get<APIKey>(`${organizationId}:key`);
-      if (!savedKey) {
-        const apiKey =
-          await this.apiKeyGenerator.generateRandomStringWithChecksum();
-        savedKey = await this.prismaService.aPIKey.create({
-          data: { apiKey, organizationId },
-        });
-      }
+      const hashedKey = await this.hash.hashKey(apiKey);
 
-      this.redisCache.set(`${organizationId}:key`, savedKey, 1000);
-      return savedKey;
+      await this.prismaService.aPIKey.updateMany({
+        where: { organizationId, deactivated: false },
+        data: { deactivated: true, deactivateAt: new Date(Date.now()) },
+      });
+
+      await this.prismaService.aPIKey.create({
+        data: { apiKey: hashedKey, organizationId },
+      });
+
+      await this.redisCache.del(`${organizationId}:account`);
+      return apiKey;
     } catch (err) {
+      console.log(err);
       throw new InternalServerErrorException('Error creating API key');
     }
   }
@@ -151,27 +161,6 @@ export class AuthService {
       };
     } catch (err) {
       throw new InternalServerErrorException('Error deactivating API key');
-    }
-  }
-
-  @Cron(CronExpression.EVERY_5_SECONDS)
-  async triggerDeactivations() {
-    try {
-      await this.prismaService.$transaction(async (tsx) => {
-        const date = new Date(Date.now());
-        const apiKeys = await tsx.aPIKey.updateMany({
-          where: { deactivateAt: { lte: date }, deactivated: false },
-          data: { deactivated: true },
-        });
-        const accounts = await tsx.account.updateMany({
-          where: { deactivateAt: { lte: date }, deactivated: false },
-          data: { deactivated: true },
-        });
-
-        return [apiKeys, accounts];
-      });
-    } catch (err) {
-      throw new InternalServerErrorException('Cron job failed');
     }
   }
 }

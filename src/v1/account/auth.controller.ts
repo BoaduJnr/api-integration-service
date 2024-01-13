@@ -37,9 +37,9 @@ export class AuthController {
   ) {
     return this.authService.createAccount(data);
   }
-  @Get('verifyKey')
+  @Get('verify-key')
   async verifyAPIKey(@APIKey('x-api-key') apiKey: string) {
-    return this.authService.getAccountByValidApiKey({ apiKey });
+    return this.authService.getAccountByValidApiKey(apiKey);
   }
 
   @UseGuards(AuthGuard)
@@ -64,7 +64,8 @@ export class AuthController {
   @UseGuards(AuthGuard)
   @Post('apikey/generate/:organizationId')
   async generateAPIKey(
-    @Param(new ValidationPipe({ whitelist: true })) data: OrganizationIdDTO,
+    @Param(new ValidationPipe({ whitelist: true }))
+    data: OrganizationIdDTO,
   ) {
     return this.authService.createAPIKey(data.organizationId);
   }

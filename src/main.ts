@@ -8,11 +8,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: true });
   app.enableVersioning({
     type: VersioningType.URI,
-    defaultVersion: '1',
+    defaultVersion: '1.0.0',
   });
   app.setGlobalPrefix('api');
   app.use(compression());
   app.use(helmet());
-  await app.listen(4000);
+  await app.listen(process.env.PORT);
 }
 bootstrap();
